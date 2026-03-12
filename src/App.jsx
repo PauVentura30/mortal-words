@@ -1,13 +1,14 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import "./App.css"
 
 function obtenerColor(letra, posicion, palabraSecreta) {
   if (letra === palabraSecreta[posicion]) {
-    return "#538d4e"
+    return "var(--color-correct)"
   }
   if (palabraSecreta.includes(letra)) {
-    return "#b59f3b"
+    return "var(--color-present)"
   }
-  return "#3a3a3c"
+  return "var(--color-absent)"
 }
 
 function obtenerEstadoTeclado(intentos, palabraSecreta) {
@@ -21,14 +22,14 @@ function obtenerEstadoTeclado(intentos, palabraSecreta) {
       const letra = intento[i]
 
       if (letra === palabraSecreta[i]) {
-        estado[letra] = "#538d4e"
+        estado[letra] = "var(--color-correct)"
       } else if (palabraSecreta.includes(letra)) {
-        if (estado[letra] !== "#538d4e") {
-          estado[letra] = "#b59f3b"
+        if (estado[letra] !== "var(--color-correct)") {
+          estado[letra] = "var(--color-present)"
         }
       } else {
         if (!estado[letra]) {
-          estado[letra] = "#3a3a3c"
+          estado[letra] = "var(--color-absent)"
         }
       }
     }
@@ -43,6 +44,8 @@ function App() {
   const palabraSecreta = "PIANO"
   const [intentos, setIntentos] = useState(["", "", "", ""])
   const [intentoActual, setIntentoActual] = useState("")
+  const [filaAnimada, setFilaAnimada] = useState(-1)
+  const [shake, setShake] = useState(false)
 
   const tecladoFilas = [
     ["Q","W","E","R","T","Y","U","I","O","P"],
@@ -60,6 +63,10 @@ function App() {
 
   function enviarIntento() {
     if (intentoActual.length !== longitudPalabra) {
+      setShake(true)
+      setTimeout(() => {
+        setShake(false)
+      }, 500)
       return
     }
     if (filaActual === -1) {
@@ -67,8 +74,12 @@ function App() {
     }
     const nuevosIntentos = [...intentos]
     nuevosIntentos[filaActual] = intentoActual
+    setFilaAnimada(filaActual)
     setIntentos(nuevosIntentos)
     setIntentoActual("")
+    setTimeout(() => {
+      setFilaAnimada(-1)
+    }, 1500)
   }
 
   function pulsarTecla(letra) {
@@ -85,18 +96,60 @@ function App() {
     setIntentoActual(intentoActual.slice(0, -1))
   }
 
+  useEffect(() => {
+    function manejarTecla(evento) {
+      if (haGanado || haPerdido) {
+        return
+      }
+      if (evento.key === "Enter") {
+        enviarIntento()
+        return
+      }
+      if (evento.key === "Backspace") {
+        borrarLetra()
+        return
+      }
+      const letra = evento.key.toUpperCase()
+      if (letra.length === 1 && letra >= "A" && letra <= "Z") {
+        pulsarTecla(letra)
+      }
+    }
+
+    window.addEventListener("keydown", manejarTecla)
+    return () => {
+      window.removeEventListener("keydown", manejarTecla)
+    }
+  })
+
   return (
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      minHeight: "100vh"
-    }}>
-      <h1>{titulo}</h1>
-      <div>
+    <div className="game-container">
+      {/* Torch particles */}
+      <div className="particles">
+        {Array(12).fill("").map((_, i) => {
+          return <div key={i} className="particle" style={{
+            left: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 6}s`,
+            animationDuration: `${4 + Math.random() * 4}s`
+          }} />
+        })}
+      </div>
+
+      {/* Lives top-left */}
+      <div className="hud-top-left">
+        {"❤️".repeat(5)}
+      </div>
+
+      {/* Title */}
+      <div className="title-container">
+        <h1 className="title">{titulo}</h1>
+        <div className="subtitle">⚔ Guess or die ⚔</div>
+      </div>
+
+      {/* Grid */}
+      <div className={`grid ${shake ? "shake" : ""}`}>
         {intentos.map((intento, filaPosicion) => {
           return (
-            <div key={filaPosicion} style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+            <div key={filaPosicion} className="grid-row">
               {Array(longitudPalabra).fill("").map((casilla, casillaPosicion) => {
                 const esFilaActual = filaPosicion === filaActual
                 const letra = esFilaActual
@@ -107,21 +160,27 @@ function App() {
                 const colorFondo = estaEnviado && tieneLetra
                   ? obtenerColor(letra, casillaPosicion, palabraSecreta)
                   : "transparent"
+                const estaAnimando = filaPosicion === filaAnimada
+
+                let claseExtra = "cell"
+                if (esFilaActual && tieneLetra) {
+                  claseExtra += " cell-active"
+                }
+                if (estaAnimando) {
+                  claseExtra += " cell-flip"
+                }
+                if (esFilaActual && tieneLetra) {
+                  claseExtra += " cell-pop"
+                }
 
                 return (
                   <div
                     key={casillaPosicion}
+                    className={claseExtra}
                     style={{
-                      width: "50px",
-                      height: "50px",
-                      border: estaEnviado && tieneLetra ? "none" : esFilaActual && tieneLetra ? "2px solid white" : "2px solid gray",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "24px",
-                      fontWeight: "bold",
-                      color: "white",
-                      backgroundColor: colorFondo
+                      backgroundColor: estaEnviado ? colorFondo : "var(--color-cell-bg)",
+                      borderColor: estaEnviado && tieneLetra ? colorFondo : esFilaActual && tieneLetra ? "var(--color-cell-active)" : "var(--color-cell-border)",
+                      animationDelay: estaAnimando ? `${casillaPosicion * 0.2}s` : "0s"
                     }}
                   >
                     {letra}
@@ -133,46 +192,38 @@ function App() {
         })}
       </div>
 
-      {haGanado && <p>¡Has ganado! 🎉</p>}
-      {haPerdido && <p>La palabra era {palabraSecreta} 💀</p>}
+      {/* Messages */}
+      {haGanado && (
+        <div className="message message-win">
+          ⚔ ¡Victoria! Has sobrevivido ⚔
+        </div>
+      )}
+      {haPerdido && (
+        <div className="message message-lose">
+          💀 La Bestia te ha atrapado... La palabra era {palabraSecreta}
+        </div>
+      )}
 
-      <div style={{ marginTop: "16px" }}>
+      {/* Keyboard */}
+      <div className="keyboard">
         {tecladoFilas.map((fila, filaIndex) => {
           return (
-            <div key={filaIndex} style={{ display: "flex", gap: "4px", justifyContent: "center", marginBottom: "4px" }}>
+            <div key={filaIndex} className="keyboard-row">
               {filaIndex === 2 && (
-                <button
-                  onClick={borrarLetra}
-                  style={{
-                    padding: "10px 12px",
-                    fontSize: "14px",
-                    fontWeight: "bold",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    backgroundColor: "#818384",
-                    color: "white"
-                  }}
-                >
-                  ←
+                <button className="key key-special" onClick={borrarLetra}>
+                  ◄
                 </button>
               )}
               {fila.map((letra) => {
                 return (
                   <button
                     key={letra}
+                    className="key"
                     onClick={() => {
                       pulsarTecla(letra)
                     }}
                     style={{
-                      padding: "10px 12px",
-                      fontSize: "14px",
-                      fontWeight: "bold",
-                      border: "none",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      backgroundColor: estadoTeclado[letra] || "#818384",
-                      color: "white"
+                      backgroundColor: estadoTeclado[letra] || "var(--color-key-bg)",
                     }}
                   >
                     {letra}
@@ -180,25 +231,19 @@ function App() {
                 )
               })}
               {filaIndex === 2 && (
-                <button
-                  onClick={enviarIntento}
-                  style={{
-                    padding: "10px 12px",
-                    fontSize: "14px",
-                    fontWeight: "bold",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                    backgroundColor: "#818384",
-                    color: "white"
-                  }}
-                >
+                <button className="key key-special" onClick={enviarIntento}>
                   ENTER
                 </button>
               )}
             </div>
           )
         })}
+      </div>
+
+      {/* HUD bottom */}
+      <div className="hud-bottom">
+        <div className="hud-bottom-left">Day 1</div>
+        <div className="hud-bottom-right">🔥 Streak 0</div>
       </div>
     </div>
   )
