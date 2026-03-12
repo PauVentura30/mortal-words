@@ -46,6 +46,18 @@ function App() {
   const [intentoActual, setIntentoActual] = useState("")
   const [filaAnimada, setFilaAnimada] = useState(-1)
   const [shake, setShake] = useState(false)
+  const [leaderboardAbierto, setLeaderboardAbierto] = useState(false)
+
+  const topJugadores = [
+    { nombre: "DarkSlayer99", dias: 142, racha: 38, vidas: 5 },
+    { nombre: "xKiraNightx", dias: 128, racha: 25, vidas: 3 },
+    { nombre: "WordMaster_ES", dias: 97, racha: 19, vidas: 4 },
+    { nombre: "PixelQueen", dias: 85, racha: 14, vidas: 2 },
+    { nombre: "NocturnBCN", dias: 73, racha: 11, vidas: 5 },
+    { nombre: "ZephyrBlade", dias: 64, racha: 8, vidas: 1 },
+    { nombre: "RuneKeeper", dias: 51, racha: 6, vidas: 3 },
+    { nombre: "ShadowLinguist", dias: 42, racha: 4, vidas: 2 },
+  ]
 
   const tecladoFilas = [
     ["Q","W","E","R","T","Y","U","I","O","P"],
@@ -138,6 +150,53 @@ function App() {
       <div className="hud-top-left">
         {"❤️".repeat(5)}
       </div>
+
+      {/* Leaderboard toggle top-right */}
+      <button className="leaderboard-toggle" onClick={() => {
+        setLeaderboardAbierto(!leaderboardAbierto)
+      }}>
+        🏆
+      </button>
+
+      {/* Leaderboard sidebar */}
+      <div className={`leaderboard ${leaderboardAbierto ? "leaderboard-open" : ""}`}>
+        <div className="leaderboard-header">
+          <span className="leaderboard-title">🏆 Top Survivors</span>
+          <button className="leaderboard-close" onClick={() => {
+            setLeaderboardAbierto(false)
+          }}>✕</button>
+        </div>
+
+        <div className="leaderboard-list">
+          {topJugadores.map((jugador, posicion) => {
+            return (
+              <div key={posicion} className={`leaderboard-row ${posicion < 3 ? "leaderboard-top3" : ""}`}>
+                <div className="leaderboard-rank">
+                  {posicion === 0 ? "👑" : posicion === 1 ? "⚔" : posicion === 2 ? "🛡" : posicion + 1}
+                </div>
+                <div className="leaderboard-info">
+                  <div className="leaderboard-name">{jugador.nombre}</div>
+                  <div className="leaderboard-stats">
+                    🔥 {jugador.racha} streak · {jugador.vidas} ❤️
+                  </div>
+                </div>
+                <div className="leaderboard-days">{jugador.dias}d</div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="leaderboard-footer">
+          Data updates daily
+        </div>
+      </div>
+
+      {/* Overlay when leaderboard is open */}
+      {leaderboardAbierto && (
+        <div className="leaderboard-overlay" onClick={() => {
+          setLeaderboardAbierto(false)
+        }} />
+      )}
 
       {/* Title */}
       <div className="title-container">
